@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>科研团队能力图谱网站</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top"><span class="brand-mark">G6</span><span>科研团队能力图谱</span></a>
+    <nav class="site-nav" aria-label="主导航">
+      <a href="#graph">能力图谱</a><a href="#teachers">指导老师</a><a href="#members">团队成员</a><a href="#resources">资源矩阵</a><a href="#manage">信息维护</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero-section">
+      <div class="hero-copy">
+        <p class="eyebrow">Research Capability Network</p>
+        <h1>科研团队能力图谱</h1>
+        <p class="hero-lede">以成员、仪器设备和软件工具为核心，沉淀团队内部可共享的研究能力，帮助快速找到合作者、实验资源和分析工具。</p>
+        <div class="hero-actions"><a class="primary-button" href="#graph">查看互动图谱</a><a class="text-link" href="#manage">添加团队信息</a></div>
+      </div>
+      <div class="hero-metrics" aria-label="团队概览">
+        <article><strong id="heroPersonCount">0</strong><span>团队成员</span></article>
+        <article><strong id="heroResourceCount">0</strong><span>设备与软件节点</span></article>
+        <article><strong id="heroSharedCount">0</strong><span>共享能力节点</span></article>
+      </div>
+    </section>
+
+    <section class="section-intro">
+      <p class="eyebrow">Overview</p>
+      <h2>把分散的能力变成可检索、可探索的团队网络</h2>
+      <p>图谱会根据成员掌握的设备与软件自动生成连接关系。点击成员可以查看研究方向、设备经验和软件工具；点击资源节点可以反向查看相关成员。</p>
+    </section>
+
+    <section id="graph" class="graph-site-section">
+      <div class="graph-heading">
+        <div><p class="eyebrow">Interactive Graph</p><h2>成员-能力-资源共享网络</h2></div>
+        <div class="stats"><div class="stat-card"><span id="personCount">0</span><small>成员</small></div><div class="stat-card"><span id="abilityCount">0</span><small>能力节点</small></div><div class="stat-card"><span id="sharedCount">0</span><small>共享能力</small></div></div>
+      </div>
+
+      <div class="graph-layout">
+        <aside class="control-panel">
+          <section class="panel"><h3>筛选</h3><label class="field"><span>搜索成员或能力</span><input id="searchInput" type="text" placeholder="例如：刘萱 / 动捕 / MATLAB"></label><label class="field"><span>节点类型</span><select id="typeFilter"><option value="all">全部类型</option><option value="person">仅成员</option><option value="equipment">仅仪器设备</option><option value="software">仅软件工具</option></select></label><button id="resetButton" class="secondary-button" type="button">重置视图</button></section>
+          <section class="panel legend"><h3>图例</h3><div><span class="dot person"></span>成员节点</div><div><span class="dot equipment"></span>仪器设备</div><div><span class="dot software"></span>软件工具</div><div><span class="dot shared"></span>共享能力节点</div></section>
+        </aside>
+        <section class="canvas-panel"><div id="graphContainer"></div></section>
+        <aside class="detail-panel"><div class="detail-card"><p class="eyebrow">Node Details</p><h2 id="detailTitle">点击节点查看详情</h2><p id="detailSubtitle" class="detail-subtitle">当前未选择任何节点</p><div id="detailMeta" class="detail-meta"></div><div id="detailContent" class="detail-content"><p class="empty-state">点击成员、设备或软件节点，右侧会显示详细信息，并在中间图谱中高亮相关关系。</p></div></div></aside>
+      </div>
+    </section>
+
+    <section id="teachers" class="content-section"><div class="section-title-row"><div><p class="eyebrow">Advisors</p><h2>指导老师</h2></div><p>这里展示团队两位老师的个人信息，后续可以在 data.js 中替换为真实姓名、方向和简介。</p></div><div id="teacherGrid" class="teacher-grid"></div></section>
+
+    <section id="members" class="content-section"><div class="section-title-row"><div><p class="eyebrow">Team Members</p><h2>团队成员</h2></div><p>每位成员旁边都有卡通头像。点击“更换头像”可以上传本地图片，头像会保存在当前浏览器中。</p></div><div id="memberGrid" class="member-grid"></div></section>
+
+    <section id="resources" class="content-section resource-section"><div class="section-title-row"><div><p class="eyebrow">Resource Matrix</p><h2>资源矩阵</h2></div><p>高频共享资源会在图谱中以暖色节点突出显示，便于识别团队共用能力。</p></div><div class="resource-columns"><article><h3>仪器设备</h3><div id="equipmentList" class="pill-list"></div></article><article><h3>软件工具</h3><div id="softwareList" class="pill-list"></div></article></div></section>
+
+    <section id="manage" class="manage-section"><div class="section-title-row"><div><p class="eyebrow">Manage</p><h2>信息维护</h2></div><p>可以在页面上临时添加人物、仪器设备和软件工具。新增内容会保存在当前浏览器本地，刷新后仍可显示。</p></div><div class="manage-actions"><button class="primary-button dark-button" type="button" data-open-form="person">添加人物信息</button><button class="primary-button dark-button" type="button" data-open-form="equipment">添加仪器设备</button><button class="primary-button dark-button" type="button" data-open-form="software">添加软件工具</button><button class="primary-button clear-button" type="button" id="clearLocalData">清除本地新增</button></div></section>
+
+    <section id="guide" class="contact-band"><div><p class="eyebrow">Guide</p><h2>使用与维护</h2><p>页面新增的数据保存在浏览器本地；如果需要长期分发给其他电脑，请把新增信息整理进项目根目录的 data.js。</p></div><a class="primary-button" href="#graph">回到图谱</a></section>
+  </main>
+
+  <footer class="site-footer"><span>科研团队能力图谱网站</span><span>Powered by AntV G6</span></footer>
+
+  <dialog id="infoDialog" class="info-dialog">
+    <form id="infoForm" method="dialog">
+      <div class="dialog-head"><div><p class="eyebrow">Add Information</p><h2 id="dialogTitle">添加信息</h2></div><button class="icon-button" type="button" id="closeDialog" aria-label="关闭">×</button></div>
+      <div id="formFields" class="form-grid"></div>
+      <menu class="dialog-actions"><button class="secondary-button light-button" type="button" id="cancelDialog">取消</button><button class="secondary-button" type="submit">保存</button></menu>
+    </form>
+  </dialog>
+
+  <input id="avatarFileInput" type="file" accept="image/*" hidden>
+  <script src="./data.js"></script>
+  <script src="https://unpkg.com/@antv/g6@4.8.24/dist/g6.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
