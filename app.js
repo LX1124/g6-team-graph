@@ -10,6 +10,8 @@
     mutedText: "#91a0aa"
   };
   const typeLabelMap = { person: "成员", equipment: "仪器设备", software: "软件工具" };
+  const supabaseUrl = "https://vamnxspbtqqogaxburqc.supabase.co";
+  const supabaseKey = "sb_publishable_797FGKGhkCKn-NJSNsKjVw_T0_Je0LY";
   const storageKey = "teamGraphUserDataV3";
   const oldStorageKey = "teamGraphUserDataV2";
   const $ = (id) => document.getElementById(id);
@@ -51,8 +53,50 @@
     }
   }
 
+  async function loadCloudData() {
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/team_graph_data?id=eq.main&select=data`, {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`
+        }
+      });
+      if (!response.ok) throw new Error(`Supabase read failed: ${response.status}`);
+      const rows = await response.json();
+      const cloudData = rows[0]?.data;
+      if (cloudData && Object.keys(cloudData).length) {
+        Object.assign(userData, { ...defaultUserData(), ...cloudData });
+        localStorage.setItem(storageKey, JSON.stringify(userData));
+      }
+    } catch (error) {
+      console.warn("云端数据读取失败，已使用本地缓存。", error);
+    }
+  }
+
   function saveUserData() {
     localStorage.setItem(storageKey, JSON.stringify(userData));
+    saveCloudData();
+  }
+
+  async function saveCloudData() {
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/team_graph_data?id=eq.main`, {
+        method: "PATCH",
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({
+          data: userData,
+          updated_at: new Date().toISOString()
+        })
+      });
+      if (!response.ok) throw new Error(`Supabase write failed: ${response.status}`);
+    } catch (error) {
+      console.warn("云端数据保存失败，数据已保存在本地。", error);
+    }
   }
 
   function rebuildRawData() {
@@ -523,7 +567,9 @@
   infoForm.addEventListener("submit", handleFormSubmit);
   $("closeDialog").addEventListener("click", () => infoDialog.close());
   $("cancelDialog").addEventListener("click", () => infoDialog.close());
-  $("clearLocalData").addEventListener("click", () => {
+  $("clearLocalData").addEventListener("click", async () => {
+    Object.assign(userData, defaultUserData());
+    await saveCloudData();
     localStorage.removeItem(storageKey);
     localStorage.removeItem(oldStorageKey);
     location.reload();
@@ -541,5 +587,10 @@
   resetButton.addEventListener("click", () => { state.focusedNodeId = null; state.searchTerm = ""; state.typeFilter = "all"; searchInput.value = ""; typeFilter.value = "all"; renderEmptyDetail("视图已重置"); applyGraphState(); });
   window.addEventListener("resize", () => { if (!graph) return; const { width, height } = getCanvasSize(); graph.changeSize(width, height); applyGraphState(); });
 
-  initGraph();
+  async function boot() {
+    await loadCloudData();
+    initGraph();
+  }
+
+  boot();
 })();
