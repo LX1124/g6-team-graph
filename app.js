@@ -48,6 +48,8 @@
   const infoForm = $("infoForm");
   const formFields = $("formFields");
   const dialogTitle = $("dialogTitle");
+  const personDialog = $("personDialog");
+  const personDialogContent = $("personDialogContent");
   const avatarFileInput = $("avatarFileInput");
 
   function defaultUserData() {
@@ -206,6 +208,44 @@
   function renderDetailExtraButtons(person) {
     const items = getPersonExtraItems(person);
     return `<div class="detail-info-buttons">${items.map(([key, label]) => `<button class="detail-toggle" type="button" data-detail-extra="${key}">${label}</button>`).join("")}</div><div id="detailExtraPanel" class="detail-extra-panel">点击上方按钮查看对应信息</div>`;
+  }
+
+  function renderInlineValue(value) {
+    if (Array.isArray(value)) return value.length ? value.map(escapeHTML).join("、") : "暂未填写";
+    return escapeHTML(value || "暂未填写");
+  }
+
+  function renderFullPersonDialog(person) {
+    const infoRows = [
+      ["邮箱", person.email],
+      ["微信号", person.wechat],
+      ["手机号", person.phone],
+      ["个人爱好", person.hobbies],
+      ["工作去向", person.career],
+      ["科研成果", person.achievements]
+    ];
+    personDialogContent.innerHTML = `
+      <div class="person-dialog-hero">
+        <img class="person-dialog-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像">
+        <div>
+          <p class="eyebrow">Member Profile</p>
+          <h2>${escapeHTML(person.name)}</h2>
+          <p class="person-dialog-subtitle">${escapeHTML(person.role || "成员")} · ${escapeHTML(getPersonGrade(person))} · ${renderBirthYearStatus(person)}</p>
+          <p>${escapeHTML(person.group || "未填写方向组")}</p>
+        </div>
+      </div>
+      <div class="person-dialog-grid">
+        ${infoRows.map(([label, value]) => `<section><h3>${escapeHTML(label)}</h3><p>${renderInlineValue(value)}</p></section>`).join("")}
+      </div>
+      <div class="person-dialog-sections">
+        <section><h3>个人简介</h3><p>${escapeHTML(person.bio || "暂无简介。")}</p></section>
+        <section><h3>论文进度</h3>${renderPaperList(person)}</section>
+        <section><h3>研究方向</h3><ul>${(person.directions || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("") || "<li>暂未填写</li>"}</ul></section>
+        <section><h3>技术方法分析</h3><ul>${(person.skills || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("") || "<li>暂未填写</li>"}</ul></section>
+        <section><h3>仪器设备</h3><ul>${(person.equipment || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("") || "<li>暂未填写</li>"}</ul></section>
+        <section><h3>软件工具</h3><ul>${(person.software || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("") || "<li>暂未填写</li>"}</ul></section>
+      </div>`;
+    personDialog.showModal();
   }
 
   function slugify(value) {
@@ -664,8 +704,8 @@
       if (person) {
         state.focusedNodeId = person.id;
         renderPersonDetail(person);
+        renderFullPersonDialog(person);
         applyGraphState();
-        $("detailTitle").scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
     const formButton = event.target.closest("[data-open-form]");
@@ -699,6 +739,10 @@
   infoForm.addEventListener("submit", handleFormSubmit);
   $("closeDialog").addEventListener("click", () => infoDialog.close());
   $("cancelDialog").addEventListener("click", () => infoDialog.close());
+  $("closePersonDialog").addEventListener("click", () => personDialog.close());
+  personDialog.addEventListener("click", (event) => {
+    if (event.target === personDialog) personDialog.close();
+  });
   $("clearLocalData").addEventListener("click", async () => {
     Object.assign(userData, defaultUserData());
     await saveCloudData();

@@ -72,6 +72,13 @@
     </form>
   </dialog>
 
+  <dialog id="personDialog" class="person-dialog">
+    <div class="person-dialog-card">
+      <button class="icon-button person-dialog-close" type="button" id="closePersonDialog" aria-label="关闭">×</button>
+      <div id="personDialogContent"></div>
+    </div>
+  </dialog>
+
   <input id="avatarFileInput" type="file" accept="image/*" hidden>
   <script src="./data.js"></script>
   <script src="https://unpkg.com/@antv/g6@4.8.24/dist/g6.min.js"></script>
