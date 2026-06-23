@@ -26,14 +26,14 @@
   let editContext = null;
   let avatarContext = null;
   const defaultProfiles = {
-    "person-liuxuan": { grade: "2022\u7ea7", age: "24", graduationStatus: "\u5df2\u6bd5\u4e1a" },
-    "person-wangzhengxin": { grade: "2022\u7ea7", age: "24", graduationStatus: "\u5df2\u6bd5\u4e1a" },
-    "person-linian": { grade: "2023\u7ea7", age: "23", graduationStatus: "\u672a\u6bd5\u4e1a" },
-    "person-songchenqi": { grade: "2023\u7ea7", age: "23", graduationStatus: "\u672a\u6bd5\u4e1a" },
-    "person-huyuhan": { grade: "2024\u7ea7", age: "22", graduationStatus: "\u672a\u6bd5\u4e1a" },
-    "person-nijialu": { grade: "2024\u7ea7", age: "22", graduationStatus: "\u672a\u6bd5\u4e1a" },
-    "person-zhangshiyu": { grade: "2025\u7ea7", age: "21", graduationStatus: "\u672a\u6bd5\u4e1a" },
-    "person-misiyan": { grade: "2025\u7ea7", age: "21", graduationStatus: "\u672a\u6bd5\u4e1a" }
+    "person-liuxuan": { grade: "2022\u7ea7", birthYear: "2002", graduationStatus: "\u5df2\u6bd5\u4e1a" },
+    "person-wangzhengxin": { grade: "2022\u7ea7", birthYear: "2002", graduationStatus: "\u5df2\u6bd5\u4e1a" },
+    "person-linian": { grade: "2023\u7ea7", birthYear: "2003", graduationStatus: "\u672a\u6bd5\u4e1a" },
+    "person-songchenqi": { grade: "2023\u7ea7", birthYear: "2003", graduationStatus: "\u672a\u6bd5\u4e1a" },
+    "person-huyuhan": { grade: "2024\u7ea7", birthYear: "2004", graduationStatus: "\u672a\u6bd5\u4e1a" },
+    "person-nijialu": { grade: "2024\u7ea7", birthYear: "2004", graduationStatus: "\u672a\u6bd5\u4e1a" },
+    "person-zhangshiyu": { grade: "2025\u7ea7", birthYear: "2005", graduationStatus: "\u672a\u6bd5\u4e1a" },
+    "person-misiyan": { grade: "2025\u7ea7", birthYear: "2005", graduationStatus: "\u672a\u6bd5\u4e1a" }
   };
 
   const searchInput = $("searchInput");
@@ -174,10 +174,17 @@
     return String(person.graduationStatus || person.status || "未毕业").trim() || "未毕业";
   }
 
-  function renderAgeStatus(person) {
+  function getBirthYear(person) {
+    const value = String(person.birthYear || person.birth || "").trim();
+    if (value) return value;
+    const age = Number(person.age);
+    return Number.isFinite(age) && age > 0 ? String(new Date().getFullYear() - age) : "出生年份待补充";
+  }
+
+  function renderBirthYearStatus(person) {
     const status = getGraduationStatus(person);
     const statusClass = status === "已毕业" ? "is-graduated" : "is-studying";
-    return `${escapeHTML(person.age || "年龄待补充")}岁 <span class="status-badge ${statusClass}">(${escapeHTML(status)})</span>`;
+    return `${escapeHTML(getBirthYear(person))}年 <span class="status-badge ${statusClass}">(${escapeHTML(status)})</span>`;
   }
 
   function renderValue(value) {
@@ -217,6 +224,7 @@
       hobbies: [],
       career: "",
       achievements: [],
+      birthYear: "",
       graduationStatus: "未毕业",
       ...defaultProfiles[person.id],
       ...person
@@ -311,7 +319,7 @@
   }
 
   function renderMemberCard(person) {
-    return `<article class="member-card"><div class="member-top"><img class="profile-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div><h3>${escapeHTML(person.name)}</h3><p>${escapeHTML(getPersonGrade(person))} · ${renderAgeStatus(person)}</p><p>${escapeHTML(person.group)}</p></div></div><div class="tag-row">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div><p class="paper-summary">论文进度 ${(person.papers || []).length} 项</p><div class="card-actions"><button type="button" data-view-person="${escapeHTML(person.id)}">查看详情</button><button type="button" data-edit-kind="person" data-edit-id="${escapeHTML(person.id)}">修改</button><button type="button" data-paper-id="${escapeHTML(person.id)}">论文进度</button><button type="button" data-avatar-kind="person" data-avatar-id="${escapeHTML(person.id)}">更换头像</button><button class="danger-action" type="button" data-delete-kind="person" data-delete-id="${escapeHTML(person.id)}">删除</button></div></article>`;
+    return `<article class="member-card"><div class="member-top"><img class="profile-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div><h3>${escapeHTML(person.name)}</h3><p>${escapeHTML(getPersonGrade(person))} · ${renderBirthYearStatus(person)}</p><p>${escapeHTML(person.group)}</p></div></div><div class="tag-row">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div><p class="paper-summary">论文进度 ${(person.papers || []).length} 项</p><div class="card-actions"><button type="button" data-view-person="${escapeHTML(person.id)}">查看详情</button><button type="button" data-edit-kind="person" data-edit-id="${escapeHTML(person.id)}">修改</button><button type="button" data-paper-id="${escapeHTML(person.id)}">论文进度</button><button type="button" data-avatar-kind="person" data-avatar-id="${escapeHTML(person.id)}">更换头像</button><button class="danger-action" type="button" data-delete-kind="person" data-delete-id="${escapeHTML(person.id)}">删除</button></div></article>`;
   }
 
   function getNodeStyle(model, focusedNodeId) {
@@ -406,7 +414,7 @@
   function renderPersonDetail(person) {
     detailTitle.textContent = person.name;
     detailSubtitle.textContent = `${person.role || "成员"} · ${person.group || "未填写方向组"}`;
-    detailMeta.innerHTML = `<div class="meta-chip-row"><span class="chip">${escapeHTML(getPersonGrade(person))}</span><span class="chip">${renderAgeStatus(person)}</span><span class="chip">研究方向 ${(person.directions || []).length}</span><span class="chip">技术方法 ${(person.skills || []).length}</span><span class="chip">仪器设备 ${(person.equipment || []).length}</span><span class="chip">软件工具 ${(person.software || []).length}</span></div><div class="tag-row">${(person.tags || []).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>`;
+    detailMeta.innerHTML = `<div class="meta-chip-row"><span class="chip">${escapeHTML(getPersonGrade(person))}</span><span class="chip">${renderBirthYearStatus(person)}</span><span class="chip">研究方向 ${(person.directions || []).length}</span><span class="chip">技术方法 ${(person.skills || []).length}</span><span class="chip">仪器设备 ${(person.equipment || []).length}</span><span class="chip">软件工具 ${(person.software || []).length}</span></div><div class="tag-row">${(person.tags || []).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>`;
     detailContent.innerHTML = `<img class="detail-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div class="detail-group"><h3>个人信息</h3>${renderDetailExtraButtons(person)}</div><button class="secondary-button" type="button" data-paper-id="${escapeHTML(person.id)}">添加论文进度</button><div class="detail-group"><h3>论文进度</h3>${renderPaperList(person)}</div><div class="detail-group"><h3>个人简介</h3><p>${escapeHTML(person.bio || "暂无简介。")}</p></div><div class="detail-group"><h3>研究方向</h3><ul>${(person.directions || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>技术方法分析</h3><ul>${(person.skills || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>仪器设备</h3><ul>${(person.equipment || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>软件工具</h3><ul>${(person.software || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div>`;
   }
 
@@ -531,7 +539,7 @@
     }
     if (type === "person") {
       const status = getGraduationStatus(record || {});
-      return `<label class="field"><span>姓名</span><input name="name" required value="${escapeHTML(record?.name || "")}"></label><label class="field"><span>身份</span><input name="role" value="${escapeHTML(record?.role || "科研组成员")}"></label><label class="field"><span>年级</span><input name="grade" placeholder="例如：2023级 / 研二" value="${escapeHTML(getPersonGrade(record || {}))}"></label><label class="field"><span>年龄</span><input name="age" type="number" min="1" value="${escapeHTML(record?.age || "")}"></label><label class="field"><span>毕业状态</span><select name="graduationStatus"><option value="未毕业" ${status === "未毕业" ? "selected" : ""}>未毕业</option><option value="已毕业" ${status === "已毕业" ? "selected" : ""}>已毕业</option></select></label><label class="field wide-field"><span>研究方向组</span><input name="group" required value="${escapeHTML(record?.group || "")}"></label><label class="field wide-field"><span>个人介绍</span><textarea name="bio" rows="3">${escapeHTML(record?.bio || "")}</textarea></label><label class="field"><span>邮箱</span><input name="email" type="email" value="${escapeHTML(record?.email || "")}"></label><label class="field"><span>微信号</span><input name="wechat" value="${escapeHTML(record?.wechat || "")}"></label><label class="field"><span>手机号</span><input name="phone" value="${escapeHTML(record?.phone || "")}"></label><label class="field"><span>个人爱好</span><input name="hobbies" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.hobbies))}"></label><label class="field"><span>工作去向</span><input name="career" value="${escapeHTML(record?.career || "")}"></label><label class="field"><span>科研成果</span><input name="achievements" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.achievements))}"></label><label class="field"><span>标签</span><input name="tags" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.tags))}"></label><label class="field"><span>研究方向</span><input name="directions" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.directions))}"></label><label class="field"><span>仪器设备</span><input name="equipment" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.equipment))}"></label><label class="field"><span>软件工具</span><input name="software" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.software))}"></label><label class="field wide-field"><span>头像图片地址</span><input name="avatar" placeholder="可留空，系统生成卡通头像" value="${escapeHTML(record?.avatar || "")}"></label>`;
+      return `<label class="field"><span>姓名</span><input name="name" required value="${escapeHTML(record?.name || "")}"></label><label class="field"><span>身份</span><input name="role" value="${escapeHTML(record?.role || "科研组成员")}"></label><label class="field"><span>年级</span><input name="grade" placeholder="例如：2023级 / 研二" value="${escapeHTML(getPersonGrade(record || {}))}"></label><label class="field"><span>出生年份</span><input name="birthYear" type="number" min="1900" max="2099" placeholder="例如：2003" value="${escapeHTML(getBirthYear(record || {}) === "出生年份待补充" ? "" : getBirthYear(record || {}))}"></label><label class="field"><span>毕业状态</span><select name="graduationStatus"><option value="未毕业" ${status === "未毕业" ? "selected" : ""}>未毕业</option><option value="已毕业" ${status === "已毕业" ? "selected" : ""}>已毕业</option></select></label><label class="field wide-field"><span>研究方向组</span><input name="group" required value="${escapeHTML(record?.group || "")}"></label><label class="field wide-field"><span>个人介绍</span><textarea name="bio" rows="3">${escapeHTML(record?.bio || "")}</textarea></label><label class="field"><span>邮箱</span><input name="email" type="email" value="${escapeHTML(record?.email || "")}"></label><label class="field"><span>微信号</span><input name="wechat" value="${escapeHTML(record?.wechat || "")}"></label><label class="field"><span>手机号</span><input name="phone" value="${escapeHTML(record?.phone || "")}"></label><label class="field"><span>个人爱好</span><input name="hobbies" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.hobbies))}"></label><label class="field"><span>工作去向</span><input name="career" value="${escapeHTML(record?.career || "")}"></label><label class="field"><span>科研成果</span><input name="achievements" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.achievements))}"></label><label class="field"><span>标签</span><input name="tags" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.tags))}"></label><label class="field"><span>研究方向</span><input name="directions" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.directions))}"></label><label class="field"><span>仪器设备</span><input name="equipment" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.equipment))}"></label><label class="field"><span>软件工具</span><input name="software" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.software))}"></label><label class="field wide-field"><span>头像图片地址</span><input name="avatar" placeholder="可留空，系统生成卡通头像" value="${escapeHTML(record?.avatar || "")}"></label>`;
     }
     const label = type === "equipment" ? "仪器设备名称" : "软件工具名称";
     return `<label class="field"><span>${label}</span><input name="name" required></label><label class="field"><span>关联成员</span><input name="owner" placeholder="例如：公共资源"></label><label class="field wide-field"><span>说明</span><textarea name="bio" rows="3" placeholder="补充用途、型号或软件功能"></textarea></label>`;
@@ -574,7 +582,7 @@
         name,
         role: String(formData.get("role") || "科研组成员").trim(),
         grade: String(formData.get("grade") || "未分年级").trim(),
-        age: String(formData.get("age") || "").trim(),
+        birthYear: String(formData.get("birthYear") || "").trim(),
         graduationStatus: String(formData.get("graduationStatus") || defaultProfiles[editContext?.id]?.graduationStatus || "未毕业").trim(),
         group: String(formData.get("group") || "未填写方向组").trim(),
         bio: String(formData.get("bio") || "暂无简介。").trim(),
@@ -601,7 +609,7 @@
         name: owner,
         role: "资源维护",
         grade: "资源",
-        age: "",
+        birthYear: "",
         graduationStatus: "未毕业",
         group: currentFormType === "equipment" ? "新增仪器设备" : "新增软件工具",
         bio: String(formData.get("bio") || `${owner} 关联的${typeLabelMap[currentFormType]}。`).trim(),
