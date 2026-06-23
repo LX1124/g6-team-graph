@@ -308,6 +308,9 @@ input, select, textarea {
   gap: 10px;
 }
 .grade-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 40px;
   padding: 9px 14px;
   border: 1px solid var(--line);
@@ -321,6 +324,17 @@ input, select, textarea {
   color: #fff;
   border-color: var(--brand);
   background: var(--brand);
+}
+.grade-button .grade-status {
+  margin-left: 0;
+  font-size: 11px;
+}
+.grade-button.is-active .grade-status {
+  background: rgba(255, 255, 255, 0.24);
+}
+.grade-button.is-active .grade-status.is-graduated,
+.grade-button.is-active .grade-status.is-studying {
+  color: #fff;
 }
 .grade-empty {
   grid-column: 1 / -1;

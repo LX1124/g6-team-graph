@@ -338,12 +338,23 @@
     return Array.from(new Set(rawData.people.map(getPersonGrade))).sort((a, b) => a.localeCompare(b, "zh-CN", { numeric: true }));
   }
 
+  function getGradeStatus(grade) {
+    const members = rawData.people.filter((person) => getPersonGrade(person) === grade);
+    return members.length && members.every((person) => getGraduationStatus(person) === "已毕业") ? "已毕业" : "未毕业";
+  }
+
+  function renderGradeStatusBadge(grade) {
+    const status = getGradeStatus(grade);
+    const statusClass = status === "已毕业" ? "is-graduated" : "is-studying";
+    return `<span class="status-badge grade-status ${statusClass}">(${escapeHTML(status)})</span>`;
+  }
+
   function renderGradeControls() {
     const grades = getGrades();
     if (state.selectedGrade !== "all" && !grades.includes(state.selectedGrade)) state.selectedGrade = "all";
     $("gradeButtons").innerHTML = [
       `<button class="grade-button ${state.selectedGrade === "all" ? "is-active" : ""}" type="button" data-grade="all">全部年级</button>`,
-      ...grades.map((grade) => `<button class="grade-button ${state.selectedGrade === grade ? "is-active" : ""}" type="button" data-grade="${escapeHTML(grade)}">${escapeHTML(grade)}</button>`)
+      ...grades.map((grade) => `<button class="grade-button ${state.selectedGrade === grade ? "is-active" : ""}" type="button" data-grade="${escapeHTML(grade)}"><span>${escapeHTML(grade)}</span>${renderGradeStatusBadge(grade)}</button>`)
     ].join("");
   }
 
