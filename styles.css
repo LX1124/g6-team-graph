@@ -235,6 +235,24 @@ input, select, textarea {
   font-size: 13px;
 }
 .chip, .tag { padding: 6px 10px; background: #eef3f5; }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.status-badge.is-graduated {
+  color: #166534;
+  background: #dcfce7;
+}
+.status-badge.is-studying {
+  color: #9a3412;
+  background: #ffedd5;
+}
 .detail-group {
   padding: 14px;
   border: 1px solid var(--line);
