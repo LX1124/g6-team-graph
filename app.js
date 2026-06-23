@@ -14,7 +14,7 @@
   const supabaseKey = "sb_publishable_797FGKGhkCKn-NJSNsKjVw_T0_Je0LY";
   const storageKey = "teamGraphUserDataV3";
   const oldStorageKey = "teamGraphUserDataV2";
-  const operatorPassword = "g6team2026";
+  const defaultOperatorPasswordHash = "76bb99d7b9c1b0f050ae7518798c6e5c920eb3a13c95686853050ba3cde712be";
   const operatorSessionKey = "teamGraphOperatorSession";
   const $ = (id) => document.getElementById(id);
   const baseData = window.teamGraphData || { teachers: [], people: [] };
@@ -56,13 +56,25 @@
   const permissionStatus = $("permissionStatus");
   const permissionHint = $("permissionHint");
   const operatorPasswordInput = $("operatorPassword");
+  const newOperatorPasswordInput = $("newOperatorPassword");
   const operatorLogin = $("operatorLogin");
+  const changeOperatorPassword = $("changeOperatorPassword");
   const operatorLogout = $("operatorLogout");
   const togglePublicEdit = $("togglePublicEdit");
   const manageActions = $("manageActions");
 
   function defaultUserData() {
-    return { teachers: [], people: [], resourcePeople: [], deletedTeacherIds: [], deletedPersonIds: [], permissions: { publicEdit: false } };
+    return { teachers: [], people: [], resourcePeople: [], deletedTeacherIds: [], deletedPersonIds: [], permissions: { publicEdit: false, operatorPasswordHash: defaultOperatorPasswordHash } };
+  }
+
+  async function hashPassword(value) {
+    const data = new TextEncoder().encode(String(value));
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function getOperatorPasswordHash() {
+    return userData.permissions?.operatorPasswordHash || defaultOperatorPasswordHash;
   }
 
   function isOperator() {
@@ -101,6 +113,7 @@
       const cloudData = rows[0]?.data;
       if (cloudData && Object.keys(cloudData).length) {
         Object.assign(userData, { ...defaultUserData(), ...cloudData });
+        userData.permissions = { ...defaultUserData().permissions, ...(userData.permissions || {}) };
         localStorage.setItem(storageKey, JSON.stringify(userData));
       }
     } catch (error) {
@@ -364,6 +377,8 @@
     manageActions.hidden = !editable;
     operatorPasswordInput.hidden = operator;
     operatorLogin.hidden = operator;
+    newOperatorPasswordInput.hidden = !operator;
+    changeOperatorPassword.hidden = !operator;
     operatorLogout.hidden = !operator;
     togglePublicEdit.hidden = !operator;
     togglePublicEdit.textContent = userData.permissions?.publicEdit ? "关闭所有人修改" : "开放所有人修改";
@@ -814,8 +829,9 @@
   personDialog.addEventListener("click", (event) => {
     if (event.target === personDialog) personDialog.close();
   });
-  operatorLogin.addEventListener("click", () => {
-    if (operatorPasswordInput.value === operatorPassword) {
+  operatorLogin.addEventListener("click", async () => {
+    const passwordHash = await hashPassword(operatorPasswordInput.value);
+    if (passwordHash === getOperatorPasswordHash()) {
       sessionStorage.setItem(operatorSessionKey, "true");
       operatorPasswordInput.value = "";
       renderWebsiteSections();
@@ -826,9 +842,26 @@
   operatorPasswordInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") operatorLogin.click();
   });
+  newOperatorPasswordInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") changeOperatorPassword.click();
+  });
   operatorLogout.addEventListener("click", () => {
     sessionStorage.removeItem(operatorSessionKey);
+    newOperatorPasswordInput.value = "";
     renderWebsiteSections();
+  });
+  changeOperatorPassword.addEventListener("click", async () => {
+    if (!isOperator()) return;
+    const nextPassword = newOperatorPasswordInput.value.trim();
+    if (nextPassword.length < 6) {
+      window.alert("新密码至少需要 6 位。");
+      return;
+    }
+    userData.permissions = { ...(userData.permissions || {}), operatorPasswordHash: await hashPassword(nextPassword) };
+    newOperatorPasswordInput.value = "";
+    saveUserData();
+    renderWebsiteSections();
+    window.alert("操作者密码已修改。");
   });
   togglePublicEdit.addEventListener("click", () => {
     if (!isOperator()) return;
