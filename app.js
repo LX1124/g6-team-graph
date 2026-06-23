@@ -14,6 +14,8 @@
   const supabaseKey = "sb_publishable_797FGKGhkCKn-NJSNsKjVw_T0_Je0LY";
   const storageKey = "teamGraphUserDataV3";
   const oldStorageKey = "teamGraphUserDataV2";
+  const operatorPassword = "g6team2026";
+  const operatorSessionKey = "teamGraphOperatorSession";
   const $ = (id) => document.getElementById(id);
   const baseData = window.teamGraphData || { teachers: [], people: [] };
   const userData = loadUserData();
@@ -51,9 +53,30 @@
   const personDialog = $("personDialog");
   const personDialogContent = $("personDialogContent");
   const avatarFileInput = $("avatarFileInput");
+  const permissionStatus = $("permissionStatus");
+  const permissionHint = $("permissionHint");
+  const operatorPasswordInput = $("operatorPassword");
+  const operatorLogin = $("operatorLogin");
+  const operatorLogout = $("operatorLogout");
+  const togglePublicEdit = $("togglePublicEdit");
+  const manageActions = $("manageActions");
 
   function defaultUserData() {
-    return { teachers: [], people: [], resourcePeople: [], deletedTeacherIds: [], deletedPersonIds: [] };
+    return { teachers: [], people: [], resourcePeople: [], deletedTeacherIds: [], deletedPersonIds: [], permissions: { publicEdit: false } };
+  }
+
+  function isOperator() {
+    return sessionStorage.getItem(operatorSessionKey) === "true";
+  }
+
+  function canEdit() {
+    return isOperator() || !!userData.permissions?.publicEdit;
+  }
+
+  function requireEditPermission() {
+    if (canEdit()) return true;
+    window.alert("当前为只读模式，请联系操作者开放修改权限。");
+    return false;
   }
 
   function loadUserData() {
@@ -330,8 +353,38 @@
     $("teacherGrid").innerHTML = rawData.teachers.map(renderTeacherCard).join("");
     renderGradeControls();
     renderMemberGrid();
+    renderPermissionPanel();
     $("equipmentList").innerHTML = equipmentCounts.map(([name, count]) => `<span class="resource-pill">${escapeHTML(name)}<b>${count}</b></span>`).join("");
     $("softwareList").innerHTML = softwareCounts.map(([name, count]) => `<span class="resource-pill">${escapeHTML(name)}<b>${count}</b></span>`).join("");
+  }
+
+  function renderPermissionPanel() {
+    const operator = isOperator();
+    const editable = canEdit();
+    manageActions.hidden = !editable;
+    operatorPasswordInput.hidden = operator;
+    operatorLogin.hidden = operator;
+    operatorLogout.hidden = !operator;
+    togglePublicEdit.hidden = !operator;
+    togglePublicEdit.textContent = userData.permissions?.publicEdit ? "关闭所有人修改" : "开放所有人修改";
+    permissionStatus.textContent = operator ? "操作者管理模式" : editable ? "所有人可修改模式" : "只读查阅模式";
+    permissionHint.textContent = operator
+      ? "你可以修改内容，也可以开放或关闭其他人的修改权限。"
+      : editable
+        ? "操作者已开放修改权限，所有访问者都可以编辑内容。"
+        : "普通访问者只能查阅内容，不能修改。";
+  }
+
+  function renderEditActions(kind, id) {
+    if (!canEdit()) return "";
+    const escapedKind = escapeHTML(kind);
+    const escapedId = escapeHTML(id);
+    const avatarButton = `<button type="button" data-avatar-kind="${escapedKind}" data-avatar-id="${escapedId}">更换头像</button>`;
+    const deleteButton = `<button class="danger-action" type="button" data-delete-kind="${escapedKind}" data-delete-id="${escapedId}">删除</button>`;
+    if (kind === "person") {
+      return `<button type="button" data-edit-kind="person" data-edit-id="${escapedId}">修改</button><button type="button" data-paper-id="${escapedId}">论文进度</button>${avatarButton}${deleteButton}`;
+    }
+    return `<button type="button" data-edit-kind="teacher" data-edit-id="${escapedId}">修改</button>${avatarButton}${deleteButton}`;
   }
 
   function getGrades() {
@@ -366,11 +419,11 @@
   }
 
   function renderTeacherCard(teacher) {
-    return `<article class="teacher-card"><img class="profile-avatar" src="${escapeHTML(teacher.avatar || fallbackAvatar(teacher.id, "dbeafe"))}" alt="${escapeHTML(teacher.name)}头像"><div><h3>${escapeHTML(teacher.name)}</h3><p class="teacher-title">${escapeHTML(teacher.title)}</p><p>${escapeHTML(teacher.group)}</p><p>${escapeHTML(teacher.bio)}</p><div class="card-actions"><button type="button" data-edit-kind="teacher" data-edit-id="${escapeHTML(teacher.id)}">修改</button><button type="button" data-avatar-kind="teacher" data-avatar-id="${escapeHTML(teacher.id)}">更换头像</button><button class="danger-action" type="button" data-delete-kind="teacher" data-delete-id="${escapeHTML(teacher.id)}">删除</button></div></div></article>`;
+    return `<article class="teacher-card"><img class="profile-avatar" src="${escapeHTML(teacher.avatar || fallbackAvatar(teacher.id, "dbeafe"))}" alt="${escapeHTML(teacher.name)}头像"><div><h3>${escapeHTML(teacher.name)}</h3><p class="teacher-title">${escapeHTML(teacher.title)}</p><p>${escapeHTML(teacher.group)}</p><p>${escapeHTML(teacher.bio)}</p><div class="card-actions">${renderEditActions("teacher", teacher.id)}</div></div></article>`;
   }
 
   function renderMemberCard(person) {
-    return `<article class="member-card"><div class="member-top"><img class="profile-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div><h3>${escapeHTML(person.name)}</h3><p>${escapeHTML(getPersonGrade(person))} · ${renderBirthYearStatus(person)}</p><p>${escapeHTML(person.group)}</p></div></div><div class="tag-row">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div><p class="paper-summary">论文进度 ${(person.papers || []).length} 项</p><div class="card-actions"><button type="button" data-view-person="${escapeHTML(person.id)}">查看详情</button><button type="button" data-edit-kind="person" data-edit-id="${escapeHTML(person.id)}">修改</button><button type="button" data-paper-id="${escapeHTML(person.id)}">论文进度</button><button type="button" data-avatar-kind="person" data-avatar-id="${escapeHTML(person.id)}">更换头像</button><button class="danger-action" type="button" data-delete-kind="person" data-delete-id="${escapeHTML(person.id)}">删除</button></div></article>`;
+    return `<article class="member-card"><div class="member-top"><img class="profile-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div><h3>${escapeHTML(person.name)}</h3><p>${escapeHTML(getPersonGrade(person))} · ${renderBirthYearStatus(person)}</p><p>${escapeHTML(person.group)}</p></div></div><div class="tag-row">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div><p class="paper-summary">论文进度 ${(person.papers || []).length} 项</p><div class="card-actions"><button type="button" data-view-person="${escapeHTML(person.id)}">查看详情</button>${renderEditActions("person", person.id)}</div></article>`;
   }
 
   function getNodeStyle(model, focusedNodeId) {
@@ -720,9 +773,13 @@
       }
     }
     const formButton = event.target.closest("[data-open-form]");
-    if (formButton) openForm(formButton.dataset.openForm);
+    if (formButton) {
+      if (!requireEditPermission()) return;
+      openForm(formButton.dataset.openForm);
+    }
     const editButton = event.target.closest("[data-edit-kind]");
     if (editButton) {
+      if (!requireEditPermission()) return;
       const kind = editButton.dataset.editKind;
       const id = editButton.dataset.editId;
       const record = kind === "teacher" ? rawData.teachers.find((item) => item.id === id) : rawData.people.find((item) => item.id === id);
@@ -730,11 +787,13 @@
     }
     const paperButton = event.target.closest("[data-paper-id]");
     if (paperButton) {
+      if (!requireEditPermission()) return;
       const person = rawData.people.find((item) => item.id === paperButton.dataset.paperId);
       if (person) openForm("paper", person);
     }
     const deleteButton = event.target.closest("[data-delete-kind]");
     if (deleteButton) {
+      if (!requireEditPermission()) return;
       const kind = deleteButton.dataset.deleteKind;
       const id = deleteButton.dataset.deleteId;
       const record = kind === "teacher" ? rawData.teachers.find((item) => item.id === id) : rawData.people.find((item) => item.id === id);
@@ -742,6 +801,7 @@
     }
     const avatarButton = event.target.closest("[data-avatar-id]");
     if (avatarButton) {
+      if (!requireEditPermission()) return;
       avatarContext = { kind: avatarButton.dataset.avatarKind, id: avatarButton.dataset.avatarId };
       avatarFileInput.click();
     }
@@ -754,7 +814,30 @@
   personDialog.addEventListener("click", (event) => {
     if (event.target === personDialog) personDialog.close();
   });
+  operatorLogin.addEventListener("click", () => {
+    if (operatorPasswordInput.value === operatorPassword) {
+      sessionStorage.setItem(operatorSessionKey, "true");
+      operatorPasswordInput.value = "";
+      renderWebsiteSections();
+    } else {
+      window.alert("密码不正确。");
+    }
+  });
+  operatorPasswordInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") operatorLogin.click();
+  });
+  operatorLogout.addEventListener("click", () => {
+    sessionStorage.removeItem(operatorSessionKey);
+    renderWebsiteSections();
+  });
+  togglePublicEdit.addEventListener("click", () => {
+    if (!isOperator()) return;
+    userData.permissions = { ...(userData.permissions || {}), publicEdit: !userData.permissions?.publicEdit };
+    saveUserData();
+    renderWebsiteSections();
+  });
   $("clearLocalData").addEventListener("click", async () => {
+    if (!requireEditPermission()) return;
     Object.assign(userData, defaultUserData());
     await saveCloudData();
     localStorage.removeItem(storageKey);

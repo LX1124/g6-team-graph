@@ -410,7 +410,41 @@ input, select, textarea {
   background: #fff1f2;
 }
 .manage-section { padding: 22px; }
+.permission-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+.permission-panel strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--brand-dark);
+}
+.permission-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.permission-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.permission-actions input {
+  width: min(220px, 100%);
+  margin: 0;
+}
+.permission-actions .primary-button {
+  min-height: 42px;
+}
 .manage-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.manage-actions[hidden] { display: none; }
 .resource-columns { align-items: stretch; gap: 16px; }
 .resource-columns article { flex: 1; padding: 18px; }
 .resource-pill { padding: 8px 10px; color: var(--text); background: #eef3f5; }
@@ -569,10 +603,11 @@ input, select, textarea {
 }
 
 @media (max-width: 760px) {
-  .site-header, .graph-heading, .section-title-row, .resource-columns, .contact-band, .site-footer {
+  .site-header, .graph-heading, .section-title-row, .resource-columns, .contact-band, .site-footer, .permission-panel {
     align-items: flex-start;
     flex-direction: column;
   }
+  .permission-actions, .permission-actions input, .permission-actions .primary-button { width: 100%; }
   .site-nav { justify-content: flex-start; }
   .hero-section { padding-top: 42px; }
   .hero-metrics, .teacher-grid, .member-grid, .form-grid { grid-template-columns: 1fr; }
