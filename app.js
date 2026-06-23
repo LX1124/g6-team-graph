@@ -19,12 +19,22 @@
   const userData = loadUserData();
   const rawData = { teachers: [], people: [] };
   const peopleById = new Map();
-  const state = { focusedNodeId: null, searchTerm: "", typeFilter: "all" };
+  const state = { focusedNodeId: null, searchTerm: "", typeFilter: "all", selectedGrade: "all" };
   let structure = null;
   let graph = null;
   let currentFormType = "person";
   let editContext = null;
   let avatarContext = null;
+  const defaultProfiles = {
+    "person-liuxuan": { grade: "2022\u7ea7", age: "24" },
+    "person-wangzhengxin": { grade: "2022\u7ea7", age: "24" },
+    "person-linian": { grade: "2023\u7ea7", age: "23" },
+    "person-songchenqi": { grade: "2023\u7ea7", age: "23" },
+    "person-huyuhan": { grade: "2024\u7ea7", age: "22" },
+    "person-nijialu": { grade: "2024\u7ea7", age: "22" },
+    "person-zhangshiyu": { grade: "2025\u7ea7", age: "21" },
+    "person-misiyan": { grade: "2025\u7ea7", age: "21" }
+  };
 
   const searchInput = $("searchInput");
   const typeFilter = $("typeFilter");
@@ -112,12 +122,12 @@
     });
     rawData.people = (baseData.people || [])
       .filter((person) => !deletedPeople.has(person.id))
-      .map((person) => ({ ...person, ...(peopleOverrides.get(person.id) || {}) }));
+      .map((person) => applyPersonDefaults({ ...person, ...(peopleOverrides.get(person.id) || {}) }));
     userData.people.forEach((person) => {
-      if (!(baseData.people || []).some((item) => item.id === person.id) && !deletedPeople.has(person.id)) rawData.people.push(person);
+      if (!(baseData.people || []).some((item) => item.id === person.id) && !deletedPeople.has(person.id)) rawData.people.push(applyPersonDefaults(person));
     });
     (userData.resourcePeople || []).forEach((person) => {
-      if (!deletedPeople.has(person.id)) rawData.people.push(person);
+      if (!deletedPeople.has(person.id)) rawData.people.push(applyPersonDefaults(person));
     });
     peopleById.clear();
     rawData.people.forEach((person) => peopleById.set(person.id, person));
@@ -156,12 +166,50 @@
     return (value || []).join("，");
   }
 
+  function getPersonGrade(person) {
+    return String(person.grade || person.year || "未分年级").trim() || "未分年级";
+  }
+
+  function renderValue(value) {
+    if (Array.isArray(value)) return value.length ? `<ul>${value.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul>` : '<p class="empty-state">暂未填写</p>';
+    return `<p>${escapeHTML(value || "暂未填写")}</p>`;
+  }
+
+  function getPersonExtraItems(person) {
+    return [
+      ["email", "邮箱", person.email],
+      ["wechat", "微信号", person.wechat],
+      ["phone", "手机号", person.phone],
+      ["hobbies", "个人爱好", person.hobbies],
+      ["career", "工作去向", person.career],
+      ["achievements", "科研成果", person.achievements]
+    ];
+  }
+
+  function renderDetailExtraButtons(person) {
+    const items = getPersonExtraItems(person);
+    return `<div class="detail-info-buttons">${items.map(([key, label]) => `<button class="detail-toggle" type="button" data-detail-extra="${key}">${label}</button>`).join("")}</div><div id="detailExtraPanel" class="detail-extra-panel">点击上方按钮查看对应信息</div>`;
+  }
+
   function slugify(value) {
     return String(value).trim().toLowerCase().replace(/\s+/g, "-");
   }
 
   function fallbackAvatar(seed, color) {
     return `https://api.dicebear.com/8.x/notionists/svg?seed=${encodeURIComponent(seed || "member")}&backgroundColor=${color || "e0f2fe"}`;
+  }
+
+  function applyPersonDefaults(person) {
+    return {
+      ...defaultProfiles[person.id],
+      email: "",
+      wechat: "",
+      phone: "",
+      hobbies: [],
+      career: "",
+      achievements: [],
+      ...person
+    };
   }
 
   function truncateLabel(text, maxLength) {
@@ -221,9 +269,30 @@
     $("abilityCount").textContent = structure.nodes.filter((node) => node.type !== "person").length;
     $("sharedCount").textContent = sharedTotal;
     $("teacherGrid").innerHTML = rawData.teachers.map(renderTeacherCard).join("");
-    $("memberGrid").innerHTML = rawData.people.map(renderMemberCard).join("");
+    renderGradeControls();
+    renderMemberGrid();
     $("equipmentList").innerHTML = equipmentCounts.map(([name, count]) => `<span class="resource-pill">${escapeHTML(name)}<b>${count}</b></span>`).join("");
     $("softwareList").innerHTML = softwareCounts.map(([name, count]) => `<span class="resource-pill">${escapeHTML(name)}<b>${count}</b></span>`).join("");
+  }
+
+  function getGrades() {
+    return Array.from(new Set(rawData.people.map(getPersonGrade))).sort((a, b) => a.localeCompare(b, "zh-CN", { numeric: true }));
+  }
+
+  function renderGradeControls() {
+    const grades = getGrades();
+    if (state.selectedGrade !== "all" && !grades.includes(state.selectedGrade)) state.selectedGrade = "all";
+    $("gradeButtons").innerHTML = [
+      `<button class="grade-button ${state.selectedGrade === "all" ? "is-active" : ""}" type="button" data-grade="all">全部年级</button>`,
+      ...grades.map((grade) => `<button class="grade-button ${state.selectedGrade === grade ? "is-active" : ""}" type="button" data-grade="${escapeHTML(grade)}">${escapeHTML(grade)}</button>`)
+    ].join("");
+  }
+
+  function renderMemberGrid() {
+    const people = state.selectedGrade === "all" ? [] : rawData.people.filter((person) => getPersonGrade(person) === state.selectedGrade);
+    $("memberGrid").innerHTML = people.length
+      ? people.map(renderMemberCard).join("")
+      : '<div class="grade-empty">成员信息已折叠，请点击上方年级按钮展开对应成员。</div>';
   }
 
   function renderTeacherCard(teacher) {
@@ -231,7 +300,7 @@
   }
 
   function renderMemberCard(person) {
-    return `<article class="member-card"><div class="member-top"><img class="profile-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div><h3>${escapeHTML(person.name)}</h3><p>${escapeHTML(person.group)}</p></div></div><div class="tag-row">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div><p class="paper-summary">论文进度 ${(person.papers || []).length} 项</p><div class="card-actions"><button type="button" data-edit-kind="person" data-edit-id="${escapeHTML(person.id)}">修改</button><button type="button" data-paper-id="${escapeHTML(person.id)}">论文进度</button><button type="button" data-avatar-kind="person" data-avatar-id="${escapeHTML(person.id)}">更换头像</button><button class="danger-action" type="button" data-delete-kind="person" data-delete-id="${escapeHTML(person.id)}">删除</button></div></article>`;
+    return `<article class="member-card"><div class="member-top"><img class="profile-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div><h3>${escapeHTML(person.name)}</h3><p>${escapeHTML(getPersonGrade(person))} · ${escapeHTML(person.age || "年龄待补充")}岁</p><p>${escapeHTML(person.group)}</p></div></div><div class="tag-row">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div><p class="paper-summary">论文进度 ${(person.papers || []).length} 项</p><div class="card-actions"><button type="button" data-view-person="${escapeHTML(person.id)}">查看详情</button><button type="button" data-edit-kind="person" data-edit-id="${escapeHTML(person.id)}">修改</button><button type="button" data-paper-id="${escapeHTML(person.id)}">论文进度</button><button type="button" data-avatar-kind="person" data-avatar-id="${escapeHTML(person.id)}">更换头像</button><button class="danger-action" type="button" data-delete-kind="person" data-delete-id="${escapeHTML(person.id)}">删除</button></div></article>`;
   }
 
   function getNodeStyle(model, focusedNodeId) {
@@ -326,8 +395,8 @@
   function renderPersonDetail(person) {
     detailTitle.textContent = person.name;
     detailSubtitle.textContent = `${person.role || "成员"} · ${person.group || "未填写方向组"}`;
-    detailMeta.innerHTML = `<div class="meta-chip-row"><span class="chip">研究方向 ${person.directions.length}</span><span class="chip">技术方法 ${person.skills.length}</span><span class="chip">仪器设备 ${person.equipment.length}</span><span class="chip">软件工具 ${person.software.length}</span></div><div class="tag-row">${(person.tags || []).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>`;
-    detailContent.innerHTML = `<img class="detail-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><button class="secondary-button" type="button" data-paper-id="${escapeHTML(person.id)}">添加论文进度</button><div class="detail-group"><h3>论文进度</h3>${renderPaperList(person)}</div><div class="detail-group"><h3>个人简介</h3><p>${escapeHTML(person.bio || "暂无简介。")}</p></div><div class="detail-group"><h3>研究方向</h3><ul>${person.directions.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>技术方法分析</h3><ul>${person.skills.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>仪器设备</h3><ul>${person.equipment.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>软件工具</h3><ul>${person.software.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div>`;
+    detailMeta.innerHTML = `<div class="meta-chip-row"><span class="chip">${escapeHTML(getPersonGrade(person))}</span><span class="chip">${escapeHTML(person.age || "年龄待补充")}岁</span><span class="chip">研究方向 ${(person.directions || []).length}</span><span class="chip">技术方法 ${(person.skills || []).length}</span><span class="chip">仪器设备 ${(person.equipment || []).length}</span><span class="chip">软件工具 ${(person.software || []).length}</span></div><div class="tag-row">${(person.tags || []).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>`;
+    detailContent.innerHTML = `<img class="detail-avatar" src="${escapeHTML(person.avatar || fallbackAvatar(person.id))}" alt="${escapeHTML(person.name)}头像"><div class="detail-group"><h3>个人信息</h3>${renderDetailExtraButtons(person)}</div><button class="secondary-button" type="button" data-paper-id="${escapeHTML(person.id)}">添加论文进度</button><div class="detail-group"><h3>论文进度</h3>${renderPaperList(person)}</div><div class="detail-group"><h3>个人简介</h3><p>${escapeHTML(person.bio || "暂无简介。")}</p></div><div class="detail-group"><h3>研究方向</h3><ul>${(person.directions || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>技术方法分析</h3><ul>${(person.skills || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>仪器设备</h3><ul>${(person.equipment || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div><div class="detail-group"><h3>软件工具</h3><ul>${(person.software || []).map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></div>`;
   }
 
   function renderPaperList(person) {
@@ -450,7 +519,7 @@
       return `<label class="field"><span>姓名</span><input name="name" required value="${escapeHTML(record?.name || "")}"></label><label class="field"><span>职务</span><input name="title" value="${escapeHTML(record?.title || "")}"></label><label class="field wide-field"><span>研究方向</span><input name="group" value="${escapeHTML(record?.group || "")}"></label><label class="field wide-field"><span>个人介绍</span><textarea name="bio" rows="3">${escapeHTML(record?.bio || "")}</textarea></label><label class="field wide-field"><span>头像图片地址</span><input name="avatar" value="${escapeHTML(record?.avatar || "")}"></label>`;
     }
     if (type === "person") {
-      return `<label class="field"><span>姓名</span><input name="name" required value="${escapeHTML(record?.name || "")}"></label><label class="field"><span>身份</span><input name="role" value="${escapeHTML(record?.role || "科研组成员")}"></label><label class="field"><span>研究方向组</span><input name="group" required value="${escapeHTML(record?.group || "")}"></label><label class="field wide-field"><span>个人介绍</span><textarea name="bio" rows="3">${escapeHTML(record?.bio || "")}</textarea></label><label class="field"><span>标签</span><input name="tags" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.tags))}"></label><label class="field"><span>研究方向</span><input name="directions" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.directions))}"></label><label class="field"><span>仪器设备</span><input name="equipment" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.equipment))}"></label><label class="field"><span>软件工具</span><input name="software" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.software))}"></label><label class="field wide-field"><span>头像图片地址</span><input name="avatar" placeholder="可留空，系统生成卡通头像" value="${escapeHTML(record?.avatar || "")}"></label>`;
+      return `<label class="field"><span>姓名</span><input name="name" required value="${escapeHTML(record?.name || "")}"></label><label class="field"><span>身份</span><input name="role" value="${escapeHTML(record?.role || "科研组成员")}"></label><label class="field"><span>年级</span><input name="grade" placeholder="例如：2023级 / 研二" value="${escapeHTML(getPersonGrade(record || {}))}"></label><label class="field"><span>年龄</span><input name="age" type="number" min="1" value="${escapeHTML(record?.age || "")}"></label><label class="field wide-field"><span>研究方向组</span><input name="group" required value="${escapeHTML(record?.group || "")}"></label><label class="field wide-field"><span>个人介绍</span><textarea name="bio" rows="3">${escapeHTML(record?.bio || "")}</textarea></label><label class="field"><span>邮箱</span><input name="email" type="email" value="${escapeHTML(record?.email || "")}"></label><label class="field"><span>微信号</span><input name="wechat" value="${escapeHTML(record?.wechat || "")}"></label><label class="field"><span>手机号</span><input name="phone" value="${escapeHTML(record?.phone || "")}"></label><label class="field"><span>个人爱好</span><input name="hobbies" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.hobbies))}"></label><label class="field"><span>工作去向</span><input name="career" value="${escapeHTML(record?.career || "")}"></label><label class="field"><span>科研成果</span><input name="achievements" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.achievements))}"></label><label class="field"><span>标签</span><input name="tags" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.tags))}"></label><label class="field"><span>研究方向</span><input name="directions" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.directions))}"></label><label class="field"><span>仪器设备</span><input name="equipment" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.equipment))}"></label><label class="field"><span>软件工具</span><input name="software" placeholder="用逗号分隔" value="${escapeHTML(joinList(record?.software))}"></label><label class="field wide-field"><span>头像图片地址</span><input name="avatar" placeholder="可留空，系统生成卡通头像" value="${escapeHTML(record?.avatar || "")}"></label>`;
     }
     const label = type === "equipment" ? "仪器设备名称" : "软件工具名称";
     return `<label class="field"><span>${label}</span><input name="name" required></label><label class="field"><span>关联成员</span><input name="owner" placeholder="例如：公共资源"></label><label class="field wide-field"><span>说明</span><textarea name="bio" rows="3" placeholder="补充用途、型号或软件功能"></textarea></label>`;
@@ -460,7 +529,7 @@
     event.preventDefault();
     const formData = new FormData(infoForm);
     const name = String(formData.get("name") || "").trim();
-    if (!name) return;
+    if (currentFormType !== "paper" && !name) return;
     if (currentFormType === "teacher") {
       const record = {
         id: editContext?.id || `teacher-custom-${Date.now()}`,
@@ -487,26 +556,39 @@
       };
       upsertUserRecord("person", updated);
     } else if (currentFormType === "person") {
+      const existing = editContext ? rawData.people.find((person) => person.id === editContext.id) : null;
       const record = {
         id: editContext?.id || `person-custom-${Date.now()}`,
         name,
         role: String(formData.get("role") || "科研组成员").trim(),
+        grade: String(formData.get("grade") || "未分年级").trim(),
+        age: String(formData.get("age") || "").trim(),
         group: String(formData.get("group") || "未填写方向组").trim(),
         bio: String(formData.get("bio") || "暂无简介。").trim(),
         avatar: String(formData.get("avatar") || "").trim() || fallbackAvatar(name, "e0f2fe"),
+        email: String(formData.get("email") || "").trim(),
+        wechat: String(formData.get("wechat") || "").trim(),
+        phone: String(formData.get("phone") || "").trim(),
+        hobbies: splitList(formData.get("hobbies")),
+        career: String(formData.get("career") || "").trim(),
+        achievements: splitList(formData.get("achievements")),
         tags: splitList(formData.get("tags")),
         directions: splitList(formData.get("directions")),
-        skills: editContext ? (rawData.people.find((person) => person.id === editContext.id)?.skills || ["页面修改信息"]) : ["页面新增信息"],
+        skills: existing?.skills || ["页面新增信息"],
         equipment: splitList(formData.get("equipment")),
-        software: splitList(formData.get("software"))
+        software: splitList(formData.get("software")),
+        papers: existing?.papers || []
       };
       upsertUserRecord("person", record);
+      state.selectedGrade = record.grade || "未分年级";
     } else {
       const owner = String(formData.get("owner") || "公共资源").trim();
       const resourcePerson = {
         id: `resource-${currentFormType}-${Date.now()}`,
         name: owner,
         role: "资源维护",
+        grade: "资源",
+        age: "",
         group: currentFormType === "equipment" ? "新增仪器设备" : "新增软件工具",
         bio: String(formData.get("bio") || `${owner} 关联的${typeLabelMap[currentFormType]}。`).trim(),
         avatar: fallbackAvatar(`${currentFormType}-${name}`, currentFormType === "equipment" ? "dbeafe" : "ede9fe"),
@@ -536,6 +618,34 @@
   }
 
   document.addEventListener("click", (event) => {
+    const gradeButton = event.target.closest("[data-grade]");
+    if (gradeButton) {
+      state.selectedGrade = gradeButton.dataset.grade;
+      renderGradeControls();
+      renderMemberGrid();
+    }
+    const detailButton = event.target.closest("[data-detail-extra]");
+    if (detailButton) {
+      const panel = $("detailExtraPanel");
+      const person = rawData.people.find((item) => item.id === state.focusedNodeId);
+      if (panel && person) {
+        const selected = getPersonExtraItems(person).find(([key]) => key === detailButton.dataset.detailExtra);
+        if (selected) {
+          document.querySelectorAll(".detail-toggle").forEach((button) => button.classList.toggle("is-open", button === detailButton));
+          panel.innerHTML = `<strong>${escapeHTML(selected[1])}</strong>${renderValue(selected[2])}`;
+        }
+      }
+    }
+    const viewButton = event.target.closest("[data-view-person]");
+    if (viewButton) {
+      const person = rawData.people.find((item) => item.id === viewButton.dataset.viewPerson);
+      if (person) {
+        state.focusedNodeId = person.id;
+        renderPersonDetail(person);
+        applyGraphState();
+        $("detailTitle").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
     const formButton = event.target.closest("[data-open-form]");
     if (formButton) openForm(formButton.dataset.openForm);
     const editButton = event.target.closest("[data-edit-kind]");
